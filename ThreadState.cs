@@ -4,22 +4,18 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace hid_sharp
-{
-    public class ThreadBarrier(int tripCount)
-    {
+namespace hid_sharp {
+    public class ThreadBarrier(int tripCount) {
         private readonly Mutex mutex = new();
         private readonly ManualResetEvent condition = new(false);
         public int Count { get; private set; } = 0;
         public int TripCount { get; private set; } = tripCount;
 
-        public void SignalAndWait()
-        {
+        public void SignalAndWait() {
             mutex.WaitOne();
 
             Count++;
-            if (Count >= TripCount)
-            {
+            if (Count >= TripCount) {
                 condition.Set();
             }
 
@@ -28,8 +24,7 @@ namespace hid_sharp
         }
     }
 
-    public class ThreadState(int barrierTripCount)
-    {
+    public class ThreadState(int barrierTripCount) {
         public Thread? Thread { get; set; }
         public Mutex Mutex { get; set; } = new Mutex(); // Protects input_reports
         public AutoResetEvent Condition { get; set; } = new AutoResetEvent(false);

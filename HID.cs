@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using NLog;
 
 namespace hid_sharp;
@@ -12,12 +13,11 @@ public static class HID {
 
     // Eventually we will detect an OS to load the correct binary
     private const string Dll = "hidapi.dll";
-    private const CallingConvention convention = CallingConvention.Cdecl;
+    private const CallingConvention convention = CallingConvention.StdCall;
 
     private static ILogger _log;
 
-    static HID()
-    {
+    static HID() {
         _log = LogManager.GetLogger("HID");
     }
 
@@ -25,7 +25,7 @@ public static class HID {
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_init")]
     private static extern int hid_init();
-    
+
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_exit")]
     private static extern int hid_exit();
 
@@ -38,17 +38,17 @@ public static class HID {
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_open")]
     private static extern nint hid_open(ushort vendorId, ushort productId, string serial_number = "");
 
-    [DllImport(Dll, CallingConvention = convention, EntryPoint ="hid_open_path")]
+    [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_open_path")]
     private static extern nint hid_open_path(string path);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_write")]
     private static extern int hid_write(ref HidDevice dev, byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read_timeout")]
-    private static extern int hid_read_timeout(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length, int milliseconds);
+    private static extern int hid_read_timeout(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length, int milliseconds);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read")]
-    private static extern int hid_read(ref HidDevice dev,[MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_read(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_set_nonblocking")]
     private static extern int hid_set_nonblocking(ref HidDevice dev, int nonblock);
@@ -57,34 +57,34 @@ public static class HID {
     private static extern int hid_send_feature_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_feature")]
-    private static extern int hid_get_feature_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_get_feature_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_send_output_report")]
     private static extern int hid_send_output_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_input_report")]
-    private static extern int hid_get_input_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_get_input_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_close")]
     private static extern void hid_close(ref HidDevice dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_manufacturer_string")]
-    private static extern int hid_get_manufacturer_string(ref HidDevice dev, string @string, int maxlen);
+    private static extern int hid_get_manufacturer_string(ref HidDevice dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_product_string")]
-    private static extern int hid_get_product_string(ref HidDevice dev, string @string, int maxlen);
+    private static extern int hid_get_product_string(ref HidDevice dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_serial_number")]
-    private static extern int hid_get_serial_number_string(ref HidDevice dev, string @string, int maxlen);
+    private static extern int hid_get_serial_number_string(ref HidDevice dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_device_info")]
     private static extern nint hid_get_device_info(ref HidDevice dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_indexed_string")]
-    private static extern int hid_get_indexed_string(ref HidDevice dev, int string_index, string @string, int maxlen);
+    private static extern int hid_get_indexed_string(ref HidDevice dev, int string_index, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_report_descriptor")]
-    private static extern int hid_get_report_descriptor(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] buf, int buf_size);
+    private static extern int hid_get_report_descriptor(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] buf, int buf_size);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_error")]
     private static extern string hid_error(ref HidDevice dev);
@@ -97,42 +97,40 @@ public static class HID {
 
     /// <summary>
     /// Initialize the HIDAPI library.
-    /// 
-    /// 
+    /// </summary>
+    /// <remarks>
     /// This function initializes the HIDAPI library. Calling it is not
     /// strictly necessary, as it will be called automatically by
     /// hid_enumerate() and any of the hid_open_*() functions if it is
     /// needed.  This function should be called at the beginning of
     /// execution however, if there is a chance of HIDAPI handles
     /// being opened by different threads simultaneously.
-    /// </summary>
+    /// </remarks>
     /// <returns>
     ///     This function returns true on success and false on error.
     ///     Call <see cref="Error(ref HidDevice?)"/> to get the failure reason.
     /// </returns>
-    public static bool Initialize()
-    {
+    public static bool Initialize() {
         bool init = hid_init() == 0;
 
         if (init) _log.Info("HIDAPI initialized successfully");
         else _log.Error("HIDAPI failed to initialize");
-        
+
         return init;
     }
 
-
-
     /// <summary>
     /// Finalize the HIDAPI library.
+    /// </summary>
+    /// <remarks>
     /// This function frees all of the static data associated with
     /// HIDAPI.It should be called at the end of execution to avoid
     /// memory leaks.
-    /// </summary>
+    /// </remarks>
     /// <returns>
     ///     This function returns true on success and false on error.
     /// </returns>
-    public static bool Exit()
-    {
+    public static bool Exit() {
         bool exit = hid_exit() == 0;
         if (exit) _log.Info("HIDAPI finalized successfully");
         else _log.Error("HIDAPI failed to finalize");
@@ -162,16 +160,14 @@ public static class HID {
     ///     or NULL in the case of failure or if no HID devices present in the system.
     ///     Call <see cref="Error(ref HidDevice?)"/> to get the failure reason.
     /// </returns>
-    public static List<HidDeviceInfo>? Enumerate(ushort vendorId = 0, ushort productId = 0)
-    {
+    public static List<HidDeviceInfo>? Enumerate(ushort vendorId = 0, ushort productId = 0) {
         List<HidDeviceInfo> devices = [];
         _log.Info("Initialized devices list");
         nint ptr = hid_enumerate(vendorId, productId);
         _log.Trace($"Device PTR: {ptr:X8}");
         nint currPtr = ptr;
-        
-        while(currPtr != nint.Zero)
-        {
+
+        while (currPtr != nint.Zero) {
             HidDeviceInfo hdi = Marshal.PtrToStructure<HidDeviceInfo>(currPtr);
             devices.Add(hdi);
             _log.Trace($"Device: {hdi} added");
@@ -190,8 +186,7 @@ public static class HID {
     /// This function frees a linked list created by <see cref="Enumerate(ushort, ushort)"/>
     /// </remarks>
     /// <param name="devices">Pointer to a list of struct_device returned from <see cref="Enumerate(ushort, ushort)"/></param>
-    private static void FreeEnumeration(List<HidDeviceInfo> devices)
-    {
+    private static void FreeEnumeration(List<HidDeviceInfo> devices) {
         // We are doing this in the wrapped function. Ignore this, mmk?
     }
 
@@ -213,27 +208,26 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice?)"/> to get the failure reason.
     /// </returns>
     public static HidDevice? Open(ushort vendorId, ushort productId, [MarshalAs(UnmanagedType.BStr)] string serialNumber = "") {
-        
+
         nint ptr = hid_open(vendorId, productId, serialNumber);
         _log.Info($"Device Opened by (VendorId,ProductId,SerialNumber)({vendorId}, {productId}, {serialNumber}) with PTR {ptr:X8}");
 
-        if(ptr == nint.Zero)
-        {
+        if (ptr == nint.Zero) {
             return null;
         }
 
-        try
-        {
-            HidDevice? dev = Marshal.PtrToStructure<HidDevice>(ptr);
-            if (dev is null) throw new ContextMarshalException("Unable to open Device");
-            return (HidDevice)dev;
-        }
-        catch (Exception ex)
-        {
+        try {
+            // TODO: It crashes here with a Fatal Internal CLR Exception. Investigate immediately.
+            // Refer to https://github.com/libusb/hidapi/blob/master/libusb/hid.c#L88
+            HidDevice dev = Marshal.PtrToStructure<HidDevice>(ptr);
+            //if (dev is null) throw new ContextMarshalException("Unable to open Device");
+            //return (HidDevice)dev;
+            return dev;
+        } catch (Exception ex) {
             _log.Fatal($"Failed to translate PTR {ptr:X8} to Struct {typeof(HidDevice).FullName}\nException: {ex}");
             return null;
         }
-        
+
     }
 
 
@@ -254,24 +248,19 @@ public static class HID {
     ///		success or NULL on failure.
     ///		Call <see cref="Error(ref HidDevice?)"/> to get the failure reason.
     /// </returns>
-    public static HidDevice? OpenPath(string path)
-    {
+    public static HidDevice? OpenPath(string path) {
         nint ptr = hid_open_path(path);
         _log.Info($"Device Opened by Path ({path}) with PTR {ptr:X8}");
 
-        if (ptr == nint.Zero)
-        {
+        if (ptr == nint.Zero) {
             return null;
         }
 
-        try
-        {
+        try {
             HidDevice? dev = Marshal.PtrToStructure<HidDevice>(ptr);
             if (dev is null) throw new ContextMarshalException("Unable to open Device");
             return (HidDevice)dev;
-        }
-        catch (Exception ex)
-        {
+        } catch (Exception ex) {
             _log.Fatal($"Failed to translate PTR {ptr:X8} to Struct {typeof(HidDevice).FullName}\nException: {ex}");
             return null;
         }
@@ -304,8 +293,7 @@ public static class HID {
     ///     This function returns the actual number of bytes written and on error.
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static int Write(ref HidDevice dev, byte[] data, int length)
-    {
+    public static int Write(ref HidDevice dev, byte[] data, int length) {
         _log.Info($"Writing {data.Length} bytes to PTR {dev.DeviceHandle:X8}");
         int result = hid_write(ref dev, data, length);
         _log.Info($"Wrote {result} bytes");
@@ -321,7 +309,6 @@ public static class HID {
     ///     The first byte will contain the Report number if the device uses numbered reports.
     /// </remarks>
     /// <param name="dev"> A device handle returned from <see cref="OpenPath(string)"/>.</param>
-    /// <param name="data"> A buffer to put the read data into. </param>
     /// <param name="length"> The number of bytes to read. For devices with multiple reports,
     ///     make sure to read an extra byte for the report number.</param>
     /// <param name="milliseconds"> The timeout in milliseconds or -1 for blocking wait.</param>
@@ -333,11 +320,9 @@ public static class HID {
     ///     If no packet was available to be read within
     ///     the timeout period, this function returns 0.
     ///	</returns>
-    public static byte[] ReadTimeout(ref HidDevice dev, int length, int milliseconds)
-    {
+    public static byte[] ReadTimeout(ref HidDevice dev, int length, int milliseconds) {
         _log.Info($"Waiting {milliseconds}ms to read data with length {length}");
-        byte[] data = new byte[length];
-        int result = hid_read_timeout(ref dev, data, length, milliseconds);
+        int result = hid_read_timeout(ref dev, out byte[] data, length, milliseconds);
         _log.Info($"Read {result} bytes");
         return data;
     }
@@ -350,7 +335,6 @@ public static class HID {
     /// 	The first byte will	contain the Report number if the device uses numbered reports.
     /// </remarks>
     /// <param name="dev">A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
-    /// <param name="data"> A buffer to put the read data into.</param>
     /// <param name="length"> The number of bytes to read. For devices with
     /// 		multiple reports, make sure to read an extra byte for
     /// 		the report number. </param>
@@ -360,10 +344,11 @@ public static class HID {
     ///     If no packet was available to be read and
     ///     the handle is in non-blocking mode, this function returns 0.
     /// </returns>
-    public static byte[] Read(ref HidDevice dev, byte[] data, int length)
-    {
-        // Converting to a returnable byte sequence;
-        return hid_read(ref dev, data, length);
+    public static byte[] Read(ref HidDevice dev, int length) {
+        _log.Info($"Reading data with length {length}");
+        int read = hid_read(ref dev, out byte[] result, length);
+        _log.Info($"Read {read} bytes");
+        return result;
     }
 
     /// <summary>
@@ -379,12 +364,17 @@ public static class HID {
     /// <param name="dev">A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
     /// <param name="nonBlock"> Enable or not the nonblocking reads <see cref="true"/> to enable nonblocking, <see cref="false"/> to disable nonblocking.</param>
     /// <returns>
-    ///     This function returns 0 on success and -1 on error.
+    ///     This function returns true on success and false on error.
     ///     Call <see cref="Error(HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static int SetNonBlocking(ref HidDevice dev, bool nonBlock) =>
+    public static bool SetNonBlocking(ref HidDevice dev, bool nonBlock) {
+        _log.Info($"Setting non-blocking mode to {nonBlock}");
         // Translate the boolean into an int for the hid_set_nonblocking function.
-        hid_set_nonblocking(ref dev, nonBlock ? 1 : 0);
+        bool result = hid_set_nonblocking(ref dev, nonBlock ? 1 : 0) == 0;
+        if (result) _log.Info("Non-Blocking Mode set");
+        else _log.Error($"Unable to set Non-Blocking Mode; {Error(ref dev)}");
+        return result;
+    }
 
     /// <summary>
     /// Send a Feature report to the device.
@@ -410,7 +400,12 @@ public static class HID {
     ///     This function returns the actual number of bytes written and -1 on error
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static int SendFeatureReport(ref HidDevice dev, byte[] data, int length) => hid_send_feature_report(ref dev, data, length);
+    public static int SendFeatureReport(ref HidDevice dev, byte[] data, int length) {
+        _log.Info("Sending Feature Report");
+        int result = hid_send_feature_report(ref dev, data, length);
+        _log.Info($"{result} bytes written");
+        return result;
+    }
 
     /// <summary>
     /// Get a feature report from a HID device.
@@ -422,11 +417,6 @@ public static class HID {
     ///     and the report data will start in <paramref name="data"/>[1].
     /// </remarks>
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/>. </param>
-    /// <param name="data">
-    ///     A buffer to put the read data into, including the Report ID.
-    ///     Set the first byte of <paramref name="data"/> to the Report ID of the report to be read,
-    ///     or set it to zero if your device does not use numbered reports.
-    /// </param> 
     /// <param name="length">
     ///     The number of bytes to read, including an extra byte for the report ID.
     ///     The buffer can be longer than the actual report.
@@ -436,7 +426,13 @@ public static class HID {
     ///     one for the report ID (which is still in the first byte), or -1 on error.
     ///     Call <see cref="Error(HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static int GetFeatureReport(ref HidDevice dev, byte[] data, int length) => hid_get_feature_report(ref dev, data, length);
+    public static byte[] GetFeatureReport(ref HidDevice dev, int length) {
+        _log.Info("Getting Feature Report");
+        int result = hid_get_feature_report(ref dev, out byte[] data, length);
+        if (result == -1) _log.Error($"Error: {Error(ref dev)}");
+        else _log.Info($"{result} bytes written");
+        return data;
+    }
 
     /// <summary>
     /// Send a Output report to the device.
@@ -464,7 +460,13 @@ public static class HID {
     /// <returns>
     ///     This function returns the actual number of bytes written and -1 on error.
     /// </returns>
-    public static int SendOutputReport(ref HidDevice dev, byte[] data, int length) => hid_send_output_report(ref dev, data, length);
+    public static int SendOutputReport(ref HidDevice dev, byte[] data, int length) {
+        _log.Info("Sending Output Report");
+        int result = hid_send_output_report(ref dev, data, length);
+        if (result == -1) _log.Error($"Error: {Error(ref dev)}");
+        else _log.Info($"{result} bytes written");
+        return result;
+    }
 
     /// <summary>
     /// Get a input report from a HID device.
@@ -477,10 +479,6 @@ public static class HID {
     ///     and the report data will start in <paramref name="data"/>[1].
     /// </remarks>
     ///     <param name="dev">A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
-    ///     <param name="data"> A buffer to put the read data into, including the Report ID.
-    ///     Set the first byte of <paramref name="data"/> to the Report ID of the report to be read,
-    ///     or set it to zero if your device does not use numbered reports.
-    /// 	</param>
     ///     <param name="length"> The number of bytes to read, including an extra byte for the report ID.
     ///     The buffer can be longer than the actual report.
     ///     </param>
@@ -491,51 +489,74 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
 
-    public static int GetInputReport(ref HidDevice dev, byte[] data, int length) => hid_get_input_report(ref dev, data, length);
+    public static byte[] GetInputReport(ref HidDevice dev, int length) {
+        int result = hid_get_input_report(ref dev, out byte[] data, length);
+        if (result == -1) _log.Error($"Error: {Error(ref dev)}");
+        else _log.Info($"{result} bytes read");
+        return data;
+    }
 
     /// <summary>
     /// Close a HID device.
     /// </summary>
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/></param>
-    public static void Close(ref HidDevice dev) => hid_close(ref dev);
+    public static void Close(ref HidDevice dev) {
+        _log.Info($"Closing Device");
+        hid_close(ref dev);
+    }
 
     /// <summary>
     /// Get The Manufacturer String from a HID device.
     /// </summary>
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
-    /// <param name="string"> A wide string buffer to put the data into.</param>
-    /// <param name="maxlen"> The length of the buffer in multiples of wchar_t.</param>
+    /// <param name="str"> A wide string buffer to put the data into.</param>
+    /// <param name="maxLen"> The length of the buffer in multiples of wchar_t.</param>
     /// <returns>
-    ///     This function returns true on success and false on error.
+    ///     This function returns the Manufacturer or empty on Error.
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static bool GetManufacturerString(ref HidDevice dev, string @string, int maxlen) => hid_get_manufacturer_string(ref dev, @string, maxlen) == 0;
+    public static string GetManufacturerString(ref HidDevice dev, int maxLen) {
+        bool result = hid_get_manufacturer_string(ref dev, out string str, maxLen) == 0;
+        if (result) _log.Info($"Obtained Manufacture String {str}");
+        else _log.Error($"Error: {Error(ref dev)}");
+        return str;
+    }
 
     /// <summary>
     /// Get The Product String from a HID device.
     /// </summary>
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
-    /// <param name="string"> A wide string buffer to put the data into.</param>
-    /// <param name="maxlen"> The length of the buffer in multiples of wchar_t.</param>
+    /// <param name="str"> A wide string buffer to put the data into.</param>
+    /// <param name="maxLen"> The length of the buffer in multiples of wchar_t.</param>
     /// <returns>
-    ///     This function returns true on success and false on error.
+    ///     This function returns the Product name or empty on Error.
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
 
-    public static bool GetProductString(ref HidDevice dev, string @string, int maxlen) => hid_get_product_string(ref dev, @string, maxlen) == 0;
+    public static string GetProductString(ref HidDevice dev, int maxLen) {
+        bool result = hid_get_product_string(ref dev, out string str, maxLen) == 0;
+        if (result) _log.Info($"Obtained Product String {str}");
+        else _log.Error($"Error: {Error(ref dev)}");
+        return str;
+    }
 
     /// <summary>
     /// Get The Serial Number String from a HID device.
     /// </summary>
     /// <param name="dev">A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
     ///	<param name="string"> A wide string buffer to put the data into.</param>
-    /// <param name="maxlen"> The length of the buffer in multiples of wchar_t.</param>
+    /// <param name="maxLen"> The length of the buffer in multiples of wchar_t.</param>
     /// <returns>
-    ///     This function returns true on success and false on error.
+    ///     This function returns the Serial Number or empty on Error.
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     ///	</returns>
 
-    public static bool GetSerialNumberString(ref HidDevice dev, string @string, int maxlen) => hid_get_serial_number_string(ref dev, @string, maxlen) == 0;
+    public static string GetSerialNumberString(ref HidDevice dev, int maxLen) {
+        bool result = hid_get_serial_number_string(ref dev, out string str, maxLen) == 0;
+        if (result) _log.Info($"Obtained Serial Number {str}");
+        else _log.Error($"Error: {Error(ref dev)}");
+        return str;
+    }
 
     /// <summary>
     /// Get The <see cref="HidDeviceInfo"/> from a HID device.
@@ -552,21 +573,37 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     ///     This struct is valid until the device is closed with <see cref="Close(ref HidDevice)"/>.
     /// </returns>
-    public static HidDeviceInfo? GetDeviceInfo(ref HidDevice dev) => hid_get_device_info(ref dev);
+    public static HidDeviceInfo? GetDeviceInfo(ref HidDevice dev) {
+        nint ptr = hid_get_device_info(ref dev);
+        try {
+            HidDeviceInfo hdi = Marshal.PtrToStructure<HidDeviceInfo>(ptr);
+            if (hdi.ManufacturerString != null) _log.Info($"Successfully translated PTR to Structure {typeof(HidDeviceInfo).FullName}");
+            else _log.Error($"Error: {Error(ref dev)}");
+            return hdi;
+        } catch (Exception ex) {
+            _log.Error(ex, $"Error: {Error(ref dev)}");
+            return null;
+        }
+    }
 
     /// <summary>
     /// Get a string from a HID device, based on its string index.
     /// </summary>
     /// <param name="dev">A device handle returned from <see cref="Open(ushort, ushort, string)"/>.</param>
-    /// <param name="string_index">The index of the string to get.</param>
-    /// <param name="string">A wide string buffer to put the data into.</param>
+    /// <param name="stringIndex">The index of the string to get.</param>
+    /// <param name="str">A wide string buffer to put the data into.</param>
     /// <param name="maxlen">The length of the buffer in multiples of wchar_t.</param>
     /// 
     /// <returns>
-    ///     This function returns true on success and false on error.
+    ///     This function returns the Indexed String on success, empty on failure.
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
-    public static bool GetIndexedString(ref HidDevice dev, int string_index, string @string, int maxlen) => hid_get_indexed_string(ref dev, string_index, @string, maxlen) == 0;
+    public static string GetIndexedString(ref HidDevice dev, int stringIndex, int maxlen) {
+        bool result = hid_get_indexed_string(ref dev, stringIndex, out string str, maxlen) == 0;
+        if (result) _log.Info($"Got Indexed String {str}");
+        else _log.Error($"Could not get Indexed String; Error: {Error(ref dev)}");
+        return str;
+    }
 
     /// <summary>
     /// Get a report descriptor from a HID device.
@@ -583,7 +620,12 @@ public static class HID {
     ///     This function returns non-negative number of bytes actually copied, or -1 on error.
     /// </returns>
 
-    public static int GetReportDescriptor(ref HidDevice dev, byte[] buf, int bufSize) => hid_get_report_descriptor(ref dev, buf, bufSize);
+    public static byte[] GetReportDescriptor(ref HidDevice dev, int bufSize) {
+        int result = hid_get_report_descriptor(ref dev, out byte[] buf, bufSize);
+        if (result == -1) _log.Error($"Error: {Error(ref dev)}");
+        else _log.Info($"Successfully got Report Descriptor; Read {result} bytes");
+        return buf;
+    }
 
     /// <summary>
     /// Get a string describing the last error which occurred.
@@ -605,7 +647,16 @@ public static class HID {
     ///     A string describing the last error(if any).
     /// </returns>
 
-    public static string Error(ref HidDevice dev) => hid_error(ref dev);
+    public static string Error(ref HidDevice dev) {
+        try {
+            string result = hid_error(ref dev);
+            _log.Trace($"Debug: Error().Result = \"{result}\"");
+            return result;
+        }catch(Exception ex) {
+            _log.Error($"Unknown Error: {ex}");
+            return "";
+        }
+    }
 
     /// <summary>
     /// Get a runtime version of the library.
@@ -617,7 +668,18 @@ public static class HID {
     ///     Pointer to statically allocated struct, that contains version.
     /// </returns>
 
-    public static HidApiVersion Version() => hid_version();
+    public static HidApiVersion Version() {
+        nint ptr = hid_version();
+
+        try {
+            HidApiVersion version = Marshal.PtrToStructure<HidApiVersion>(ptr);
+            _log.Info($"Acquired HID API Version ({version})");
+            return version;
+        }catch (Exception ex) {
+            _log.Error($"Unable to translate PTR to HidApiVersion; {ex}");
+            return new HidApiVersion() { Major = -1, Minor = -1, Patch = -1 };
+        }
+    }
 
     /// <summary>
     /// Get a runtime version string of the library.
@@ -628,6 +690,9 @@ public static class HID {
     /// <returns>
     ///     Pointer to statically allocated string, that contains version string.
     /// </returns>
-
-    public static string VersionStr() => hid_version_str();
+    public static string VersionStr() {
+        string version = hid_version_str();
+        _log.Info($"Runtime Version: {version}");
+        return version;
+    }
 }

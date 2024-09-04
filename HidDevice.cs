@@ -2,8 +2,7 @@
 
 namespace hid_sharp;
 
-public struct HidDevice
-{
+public struct HidDevice {
     /// <summary>
     /// Handle to the actual device — libusb_device_handle* device_handle
     /// </summary>
@@ -13,7 +12,7 @@ public struct HidDevice
     /// USB Configuration Number of the device — int config_number
     /// </summary>
     public int ConfigNumber;
-    
+
     /// <summary>
     /// The interface number of the HID — int interface;
     /// </summary>
@@ -43,7 +42,7 @@ public struct HidDevice
     /// Manufacture Index — int manufacturer_index
     /// </summary>
     public int ManufacturerIndex;
-    
+
     /// <summary>
     /// Product Index — int product_index
     /// </summary>
@@ -62,8 +61,8 @@ public struct HidDevice
     /// <summary>
     /// Whether blocking reads are used — int blocking
     /// </summary>
-    [MarshalAs(UnmanagedType.Bool)]
-    public bool Blocking; // Originally int
+    [MarshalAs(UnmanagedType.I4)]
+    public int Blocking; // Originally int
 
     /// <summary>
     /// Read Thread Objects — hidapi_thread_state thread_state
@@ -85,4 +84,9 @@ public struct HidDevice
     /// List of received input reports — input_report* input_reports
     /// </summary>
     public nint InputReports;
+
+    public HidDeviceInfo GetDeviceInfo() {
+        if (DeviceInfo == nint.Zero) return default;
+        return (HidDeviceInfo)Marshal.PtrToStructure(DeviceInfo, typeof(HidDeviceInfo))!;
+    }
 }

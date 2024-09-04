@@ -19,18 +19,15 @@ public struct HidDeviceInfo {
     // public HidDeviceInfo Next;       // We need to make an IList<HidDeviceInfo> to enumerate through devices.
     public nint Next;         // Unless otherwise specified, this is a pointer and/or dummy
     public HidBusType BusType;          // hid_bus_type
-    public override string ToString()
-    {
+    public override string ToString() {
         return $"{Path} - {VendorId:X4}:{ProductId:X4} - {ManufacturerString} - {ProductString} ({SerialNumber})";
     }
 
-    public static explicit operator HidDeviceInfo?(nint ptr)
-    {
+    public static explicit operator HidDeviceInfo?(nint ptr) {
         return Marshal.PtrToStructure<HidDeviceInfo>(ptr);
     }
 
-    public static explicit operator nint(HidDeviceInfo hdi)
-    {
+    public static explicit operator nint(HidDeviceInfo hdi) {
         nint ptr = new();
         Marshal.StructureToPtr(hdi, ptr, false);
         return ptr;
