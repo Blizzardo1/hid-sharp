@@ -13,7 +13,7 @@ public static class HID {
 
     // Eventually we will detect an OS to load the correct binary
     private const string Dll = "hidapi.dll";
-    private const CallingConvention convention = CallingConvention.StdCall;
+    private const CallingConvention convention = CallingConvention.Cdecl;
 
     private static ILogger _log;
 
@@ -219,7 +219,7 @@ public static class HID {
         try {
             // TODO: It crashes here with a Fatal Internal CLR Exception. Investigate immediately.
             // Refer to https://github.com/libusb/hidapi/blob/master/libusb/hid.c#L88
-            HidDevice dev = Marshal.PtrToStructure<HidDevice>(ptr);
+            HidDevice dev = (HidDevice)ptr;
             //if (dev is null) throw new ContextMarshalException("Unable to open Device");
             //return (HidDevice)dev;
             return dev;
@@ -502,6 +502,7 @@ public static class HID {
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/></param>
     public static void Close(ref HidDevice dev) {
         _log.Info($"Closing Device");
+        // AccessViolationException
         hid_close(ref dev);
     }
 
