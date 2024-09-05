@@ -2,8 +2,8 @@
 
 namespace hid_sharp;
 
-public struct HidDevice
-{
+[StructLayout(LayoutKind.Sequential)]
+public struct HidDevice {
     /// <summary>
     /// Handle to the actual device — libusb_device_handle* device_handle
     /// </summary>
@@ -13,7 +13,7 @@ public struct HidDevice
     /// USB Configuration Number of the device — int config_number
     /// </summary>
     public int ConfigNumber;
-    
+
     /// <summary>
     /// The interface number of the HID — int interface;
     /// </summary>
@@ -43,7 +43,7 @@ public struct HidDevice
     /// Manufacture Index — int manufacturer_index
     /// </summary>
     public int ManufacturerIndex;
-    
+
     /// <summary>
     /// Product Index — int product_index
     /// </summary>
@@ -62,27 +62,52 @@ public struct HidDevice
     /// <summary>
     /// Whether blocking reads are used — int blocking
     /// </summary>
-    [MarshalAs(UnmanagedType.Bool)]
-    public bool Blocking; // Originally int
+    [MarshalAs(UnmanagedType.I4)]
+    public int Blocking;
 
     /// <summary>
     /// Read Thread Objects — hidapi_thread_state thread_state
     /// </summary>
     public ThreadState ThreadState;
+    
     /// <summary>
     /// Read Thread Objects — int shutdown_thread
     /// </summary>
     public int ShutdownThread;
+    
     /// <summary>
     /// Read Thread Objects — int transfer_loop_finished
     /// </summary>
     public int TransferLoopFinished;
+    
     /// <summary>
     /// Read Thread Objects — libusb_transfer* transfer
     /// </summary>
     public nint Transfer;
+    
     /// <summary>
     /// List of received input reports — input_report* input_reports
     /// </summary>
     public nint InputReports;
+
+    /// <summary>
+    /// Is the Kernel driver detached? — int kernel_driver_detached
+    /// </summary>
+    public int IsDriverDetached;
+    
+
+    public HidDeviceInfo GetDeviceInfo() {
+        if (DeviceInfo == nint.Zero) return default;
+        return (HidDeviceInfo)Marshal.PtrToStructure(DeviceInfo, typeof(HidDeviceInfo))!;
+    }
+
+    public static explicit operator HidDevice(nint ptr) {
+        return Marshal.PtrToStructure<HidDevice>(ptr)!;
+    }
+
+    public static explicit operator nint(HidDevice device) {
+        nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf<HidDevice>());
+        Marshal.StructureToPtr(device, ptr, false);
+        return ptr;
+    }
 }
