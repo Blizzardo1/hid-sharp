@@ -1,4 +1,6 @@
-﻿using System.Runtime.InteropServices;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Runtime.InteropServices;
 
 namespace hid_sharp.API;
 
@@ -69,22 +71,22 @@ public struct HidDevice {
     /// Read Thread Objects — hidapi_thread_state thread_state
     /// </summary>
     public ThreadState ThreadState;
-    
+
     /// <summary>
     /// Read Thread Objects — int shutdown_thread
     /// </summary>
     public int ShutdownThread;
-    
+
     /// <summary>
     /// Read Thread Objects — int transfer_loop_finished
     /// </summary>
     public int TransferLoopFinished;
-    
+
     /// <summary>
     /// Read Thread Objects — libusb_transfer* transfer
     /// </summary>
     public nint Transfer;
-    
+
     /// <summary>
     /// List of received input reports — input_report* input_reports
     /// </summary>
@@ -94,20 +96,32 @@ public struct HidDevice {
     /// Is the Kernel driver detached? — int kernel_driver_detached
     /// </summary>
     public int IsDriverDetached;
-    
 
     public HidDeviceInfo GetDeviceInfo() {
         if (DeviceInfo == nint.Zero) return default;
         return (HidDeviceInfo)Marshal.PtrToStructure(DeviceInfo, typeof(HidDeviceInfo))!;
     }
 
-    public static explicit operator HidDevice(nint ptr) {
-        return Marshal.PtrToStructure<HidDevice>(ptr)!;
+    public override bool Equals([NotNullWhen(true)] object? obj) => base.Equals(obj);
+
+    public static bool operator ==(HidDevice a, HidDevice b) {
+        return a.DeviceHandle == b.DeviceHandle;
     }
 
+    public static bool operator !=(HidDevice a, HidDevice b) {
+        return a.DeviceHandle != b.DeviceHandle;
+    }
+
+    public static explicit operator HidDevice(nint ptr) => Marshal.PtrToStructure<HidDevice>(ptr)!;
+
     public static explicit operator nint(HidDevice device) {
-        nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf<HidDevice>());
-        Marshal.StructureToPtr(device, ptr, false);
+        nint ptr = nint.Zero;
+        try {
+            ptr = HID.ConnectedDevices.FirstOrDefault(x => x.Device == device).DeviceHandle;
+        } catch (Exception) {
+            // default struct is already initialized, meaning ptr should still be zero.
+            // exception is just incase it doesn't work out the way I want to.
+        }
         return ptr;
     }
 }

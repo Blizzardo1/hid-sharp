@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Formats.Tar;
 using System.Runtime.InteropServices;
 using NLog;
 
@@ -16,10 +17,20 @@ public static class HID {
     private const CallingConvention convention = CallingConvention.Cdecl;
 
     private static ILogger _log;
+    
+    public struct HidDeviceMap {
+        public nint DeviceHandle;
+        public HidDevice Device;
+    }
+
+    public static IList<HidDeviceMap> ConnectedDevices { get; private set; }
 
     static HID() {
         _log = LogManager.GetLogger("HID");
+        ConnectedDevices = [];
     }
+
+    private static void ErrorNoDev() => _log.Error("Error: No device or device not open");
 
     public static int MakeVersion(int major, int minor, int patch) => ((major) << 24) | ((minor) << 8) | (patch);
 
@@ -164,7 +175,7 @@ public static class HID {
         List<HidDeviceInfo> devices = [];
         _log.Info("Initialized devices list");
         nint ptr = hid_enumerate(vendorId, productId);
-        _log.Trace($"Device PTR: {ptr:X8}");
+        _log.Trace($"Device PTR: 0x{ptr:X8}");
         nint currPtr = ptr;
 
         while (currPtr != nint.Zero) {
@@ -210,21 +221,20 @@ public static class HID {
     public static HidDevice? Open(ushort vendorId, ushort productId, [MarshalAs(UnmanagedType.BStr)] string serialNumber = "") {
 
         nint ptr = hid_open(vendorId, productId, serialNumber);
-        _log.Info($"Device Opened by (VendorId,ProductId,SerialNumber)({vendorId}, {productId}, {serialNumber}) with PTR {ptr:X8}");
+        _log.Info($"Device Opened by (VendorId,ProductId,SerialNumber)({vendorId}, {productId}, {serialNumber}) with PTR 0x{ptr:X8}");
 
         if (ptr == nint.Zero) {
             return null;
         }
 
         try {
-            // TODO: It crashes here with a Fatal Internal CLR Exception. Investigate immediately.
-            // Refer to https://github.com/libusb/hidapi/blob/master/libusb/hid.c#L88
             HidDevice dev = (HidDevice)ptr;
-            //if (dev is null) throw new ContextMarshalException("Unable to open Device");
-            //return (HidDevice)dev;
+            
+            ConnectedDevices.Add(new HidDeviceMap() { Device = dev, DeviceHandle = ptr });
+
             return dev;
         } catch (Exception ex) {
-            _log.Fatal($"Failed to translate PTR {ptr:X8} to Struct {typeof(HidDevice).FullName}\nException: {ex}");
+            _log.Fatal($"Failed to translate PTR 0x{ptr:X8} to Struct {typeof(HidDevice).FullName}\nException: {ex}");
             return null;
         }
 
@@ -250,7 +260,7 @@ public static class HID {
     /// </returns>
     public static HidDevice? OpenPath(string path) {
         nint ptr = hid_open_path(path);
-        _log.Info($"Device Opened by Path ({path}) with PTR {ptr:X8}");
+        _log.Info($"Device Opened by Path ({path}) with PTR 0x{ptr:X8}");
 
         if (ptr == nint.Zero) {
             return null;
@@ -259,6 +269,9 @@ public static class HID {
         try {
             HidDevice? dev = Marshal.PtrToStructure<HidDevice>(ptr);
             if (dev is null) throw new ContextMarshalException("Unable to open Device");
+            
+            ConnectedDevices.Add(new HidDeviceMap() { Device = (HidDevice)dev, DeviceHandle = ptr });
+
             return (HidDevice)dev;
         } catch (Exception ex) {
             _log.Fatal($"Failed to translate PTR {ptr:X8} to Struct {typeof(HidDevice).FullName}\nException: {ex}");
@@ -294,8 +307,16 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static int Write(ref HidDevice dev, byte[] data, int length) {
-        _log.Info($"Writing {data.Length} bytes to PTR {dev.DeviceHandle:X8}");
-        int result = hid_write((nint)dev, data, length);
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return -1;
+        }
+        _log.Info($"Writing {data.Length} bytes to PTR 0x{ptr:X8} -> {data.ToHex()}");
+        int result = hid_write(ptr, data, length);
+        if (result == -1) {
+            Error(ref dev);
+        }
         _log.Info($"Wrote {result} bytes");
         return result;
     }
@@ -321,8 +342,13 @@ public static class HID {
     ///     the timeout period, this function returns 0.
     ///	</returns>
     public static byte[] ReadTimeout(ref HidDevice dev, int length, int milliseconds) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return [];
+        }
         _log.Info($"Waiting {milliseconds}ms to read data with length {length}");
-        int result = hid_read_timeout((nint)dev, out byte[] data, length, milliseconds);
+        int result = hid_read_timeout(ptr, out byte[] data, length, milliseconds);
         _log.Info($"Read {result} bytes");
         return data;
     }
@@ -345,8 +371,13 @@ public static class HID {
     ///     the handle is in non-blocking mode, this function returns 0.
     /// </returns>
     public static byte[] Read(ref HidDevice dev, int length) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return [];
+        }
         _log.Info($"Reading data with length {length}");
-        int read = hid_read((nint)dev, out byte[] result, length);
+        int read = hid_read(ptr, out byte[] result, length);
         _log.Info($"Read {read} bytes");
         return result;
     }
@@ -368,9 +399,14 @@ public static class HID {
     ///     Call <see cref="Error(HidDevice)"/> to get the failure reason.
     /// </returns>
     public static bool SetNonBlocking(ref HidDevice dev, bool nonBlock) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return false;
+        }
         _log.Info($"Setting non-blocking mode to {nonBlock}");
         // Translate the boolean into an int for the hid_set_nonblocking function.
-        bool result = hid_set_nonblocking((nint)dev, nonBlock ? 1 : 0) == 0;
+        bool result = hid_set_nonblocking(ptr, nonBlock ? 1 : 0) == 0;
         if (result) _log.Info("Non-Blocking Mode set");
         else _log.Error($"Unable to set Non-Blocking Mode; {Error(ref dev)}");
         return result;
@@ -401,8 +437,13 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static int SendFeatureReport(ref HidDevice dev, byte[] data, int length) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return -1;
+        }
         _log.Info("Sending Feature Report");
-        int result = hid_send_feature_report((nint)dev, data, length);
+        int result = hid_send_feature_report(ptr, data, length);
         _log.Info($"{result} bytes written");
         return result;
     }
@@ -427,8 +468,13 @@ public static class HID {
     ///     Call <see cref="Error(HidDevice)"/> to get the failure reason.
     /// </returns>
     public static byte[] GetFeatureReport(ref HidDevice dev, int length) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return [];
+        }
         _log.Info("Getting Feature Report");
-        int result = hid_get_feature_report((nint)dev, out byte[] data, length);
+        int result = hid_get_feature_report(ptr, out byte[] data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes written");
         return data;
@@ -461,8 +507,13 @@ public static class HID {
     ///     This function returns the actual number of bytes written and -1 on error.
     /// </returns>
     public static int SendOutputReport(ref HidDevice dev, byte[] data, int length) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return -1;
+        }
         _log.Info("Sending Output Report");
-        int result = hid_send_output_report((nint)dev, data, length);
+        int result = hid_send_output_report(ptr, data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes written");
         return result;
@@ -490,7 +541,12 @@ public static class HID {
     /// </returns>
 
     public static byte[] GetInputReport(ref HidDevice dev, int length) {
-        int result = hid_get_input_report((nint)dev, out byte[] data, length);
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return [];
+        }
+        int result = hid_get_input_report(ptr, out byte[] data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes read");
         return data;
@@ -501,9 +557,20 @@ public static class HID {
     /// </summary>
     /// <param name="dev"> A device handle returned from <see cref="Open(ushort, ushort, string)"/></param>
     public static void Close(ref HidDevice dev) {
+        nint ptr = (nint)dev;
+        _log.Info($"HID.Close()->PTR: 0x{ptr:X8}");
+        if (ptr == nint.Zero) {
+            _log.Warn("Device is already closed");
+            return;
+        }
         _log.Info($"Closing Device");
         // AccessViolationException
-        hid_close((nint)dev);
+        hid_close(ptr);
+        if (!ConnectedDevices.Remove(ConnectedDevices.FirstOrDefault(x => x.DeviceHandle == ptr)))
+            _log.Error("Failed to remove device from connected devices list");
+        else
+            _log.Info("Removed device from connected devices list");
+
     }
 
     /// <summary>
@@ -517,7 +584,12 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static string GetManufacturerString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_manufacturer_string((nint)dev, out string str, maxLen) == 0;
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return "";
+        }
+        bool result = hid_get_manufacturer_string(ptr, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Manufacture String {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -535,7 +607,12 @@ public static class HID {
     /// </returns>
 
     public static string GetProductString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_product_string((nint)dev, out string str, maxLen) == 0;
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return "";
+        }
+        bool result = hid_get_product_string(ptr, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Product String {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -553,7 +630,12 @@ public static class HID {
     ///	</returns>
 
     public static string GetSerialNumberString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_serial_number_string((nint)dev, out string str, maxLen) == 0;
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return "";
+        }
+        bool result = hid_get_serial_number_string(ptr, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Serial Number {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -575,9 +657,20 @@ public static class HID {
     ///     This struct is valid until the device is closed with <see cref="Close(ref HidDevice)"/>.
     /// </returns>
     public static HidDeviceInfo? GetDeviceInfo(ref HidDevice dev) {
-        nint ptr = hid_get_device_info((nint)dev);
+        nint devPtr = (nint)dev;
+        if (devPtr == nint.Zero) {
+            ErrorNoDev();
+            return null;
+        }
+        
+        nint ptr = hid_get_device_info(devPtr);
+        if (ptr == nint.Zero) {
+            _log.Error($"Error: {Error(ref dev)}");
+            return null;
+        }
+        
         try {
-            HidDeviceInfo hdi = Marshal.PtrToStructure<HidDeviceInfo>(ptr);
+            HidDeviceInfo hdi = (HidDeviceInfo)ptr;
             if (hdi.ManufacturerString != null) _log.Info($"Successfully translated PTR to Structure {typeof(HidDeviceInfo).FullName}");
             else _log.Error($"Error: {Error(ref dev)}");
             return hdi;
@@ -600,7 +693,12 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static string GetIndexedString(ref HidDevice dev, int stringIndex, int maxlen) {
-        bool result = hid_get_indexed_string((nint)dev, stringIndex, out string str, maxlen) == 0;
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return "";
+        }
+        bool result = hid_get_indexed_string(ptr, stringIndex, out string str, maxlen) == 0;
         if (result) _log.Info($"Got Indexed String {str}");
         else _log.Error($"Could not get Indexed String; Error: {Error(ref dev)}");
         return str;
@@ -622,7 +720,12 @@ public static class HID {
     /// </returns>
 
     public static byte[] GetReportDescriptor(ref HidDevice dev, int bufSize) {
-        int result = hid_get_report_descriptor((nint)dev, out byte[] buf, bufSize);
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return [];
+        }
+        int result = hid_get_report_descriptor(ptr, out byte[] buf, bufSize);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"Successfully got Report Descriptor; Read {result} bytes");
         return buf;
@@ -647,10 +750,14 @@ public static class HID {
     /// <returns>
     ///     A string describing the last error(if any).
     /// </returns>
-
     public static string Error(ref HidDevice dev) {
+        nint ptr = (nint)dev;
+        if (ptr == nint.Zero) {
+            ErrorNoDev();
+            return "";
+        }
         try {
-            string result = hid_error((nint)dev);
+            string result = hid_error(ptr);
             _log.Trace($"Debug: Error().Result = \"{result}\"");
             return result;
         } catch (Exception ex) {
@@ -673,7 +780,7 @@ public static class HID {
         nint ptr = hid_version();
 
         try {
-            HidApiVersion version = Marshal.PtrToStructure<HidApiVersion>(ptr);
+            HidApiVersion version = (HidApiVersion)ptr;
             _log.Info($"Acquired HID API Version ({version})");
             return version;
         } catch (Exception ex) {
