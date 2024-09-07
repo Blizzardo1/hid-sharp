@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace hid_sharp;
+namespace hid_sharp.API;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct HidDeviceInfo {

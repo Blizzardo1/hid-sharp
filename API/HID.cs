@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using NLog;
 
-namespace hid_sharp;
+namespace hid_sharp.API;
 
 public static class HID {
     // Remember that HID_API_EXPORT is __declspec(dllexport) in Windows
@@ -42,52 +42,52 @@ public static class HID {
     private static extern nint hid_open_path(string path);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_write")]
-    private static extern int hid_write(ref HidDevice dev, byte[] data, int length);
+    private static extern int hid_write(nint dev, byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read_timeout")]
-    private static extern int hid_read_timeout(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length, int milliseconds);
+    private static extern int hid_read_timeout(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length, int milliseconds);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read")]
-    private static extern int hid_read(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_read(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_set_nonblocking")]
-    private static extern int hid_set_nonblocking(ref HidDevice dev, int nonblock);
+    private static extern int hid_set_nonblocking(nint dev, int nonblock);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_send_feature")]
-    private static extern int hid_send_feature_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_send_feature_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_feature")]
-    private static extern int hid_get_feature_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_get_feature_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_send_output_report")]
-    private static extern int hid_send_output_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_send_output_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_input_report")]
-    private static extern int hid_get_input_report(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_get_input_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_close")]
-    private static extern void hid_close(ref HidDevice dev);
+    private static extern void hid_close(nint dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_manufacturer_string")]
-    private static extern int hid_get_manufacturer_string(ref HidDevice dev, out string @string, int maxlen);
+    private static extern int hid_get_manufacturer_string(nint dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_product_string")]
-    private static extern int hid_get_product_string(ref HidDevice dev, out string @string, int maxlen);
+    private static extern int hid_get_product_string(nint dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_serial_number")]
-    private static extern int hid_get_serial_number_string(ref HidDevice dev, out string @string, int maxlen);
+    private static extern int hid_get_serial_number_string(nint dev, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_device_info")]
-    private static extern nint hid_get_device_info(ref HidDevice dev);
+    private static extern nint hid_get_device_info(nint dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_indexed_string")]
-    private static extern int hid_get_indexed_string(ref HidDevice dev, int string_index, out string @string, int maxlen);
+    private static extern int hid_get_indexed_string(nint dev, int string_index, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_report_descriptor")]
-    private static extern int hid_get_report_descriptor(ref HidDevice dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] buf, int buf_size);
+    private static extern int hid_get_report_descriptor(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] buf, int buf_size);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_error")]
-    private static extern string hid_error(ref HidDevice dev);
+    private static extern string hid_error(nint dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_version")]
     private static extern nint hid_version();
@@ -295,7 +295,7 @@ public static class HID {
     /// </returns>
     public static int Write(ref HidDevice dev, byte[] data, int length) {
         _log.Info($"Writing {data.Length} bytes to PTR {dev.DeviceHandle:X8}");
-        int result = hid_write(ref dev, data, length);
+        int result = hid_write((nint)dev, data, length);
         _log.Info($"Wrote {result} bytes");
         return result;
     }
@@ -322,7 +322,7 @@ public static class HID {
     ///	</returns>
     public static byte[] ReadTimeout(ref HidDevice dev, int length, int milliseconds) {
         _log.Info($"Waiting {milliseconds}ms to read data with length {length}");
-        int result = hid_read_timeout(ref dev, out byte[] data, length, milliseconds);
+        int result = hid_read_timeout((nint)dev, out byte[] data, length, milliseconds);
         _log.Info($"Read {result} bytes");
         return data;
     }
@@ -346,7 +346,7 @@ public static class HID {
     /// </returns>
     public static byte[] Read(ref HidDevice dev, int length) {
         _log.Info($"Reading data with length {length}");
-        int read = hid_read(ref dev, out byte[] result, length);
+        int read = hid_read((nint)dev, out byte[] result, length);
         _log.Info($"Read {read} bytes");
         return result;
     }
@@ -370,7 +370,7 @@ public static class HID {
     public static bool SetNonBlocking(ref HidDevice dev, bool nonBlock) {
         _log.Info($"Setting non-blocking mode to {nonBlock}");
         // Translate the boolean into an int for the hid_set_nonblocking function.
-        bool result = hid_set_nonblocking(ref dev, nonBlock ? 1 : 0) == 0;
+        bool result = hid_set_nonblocking((nint)dev, nonBlock ? 1 : 0) == 0;
         if (result) _log.Info("Non-Blocking Mode set");
         else _log.Error($"Unable to set Non-Blocking Mode; {Error(ref dev)}");
         return result;
@@ -402,7 +402,7 @@ public static class HID {
     /// </returns>
     public static int SendFeatureReport(ref HidDevice dev, byte[] data, int length) {
         _log.Info("Sending Feature Report");
-        int result = hid_send_feature_report(ref dev, data, length);
+        int result = hid_send_feature_report((nint)dev, data, length);
         _log.Info($"{result} bytes written");
         return result;
     }
@@ -428,7 +428,7 @@ public static class HID {
     /// </returns>
     public static byte[] GetFeatureReport(ref HidDevice dev, int length) {
         _log.Info("Getting Feature Report");
-        int result = hid_get_feature_report(ref dev, out byte[] data, length);
+        int result = hid_get_feature_report((nint)dev, out byte[] data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes written");
         return data;
@@ -462,7 +462,7 @@ public static class HID {
     /// </returns>
     public static int SendOutputReport(ref HidDevice dev, byte[] data, int length) {
         _log.Info("Sending Output Report");
-        int result = hid_send_output_report(ref dev, data, length);
+        int result = hid_send_output_report((nint)dev, data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes written");
         return result;
@@ -490,7 +490,7 @@ public static class HID {
     /// </returns>
 
     public static byte[] GetInputReport(ref HidDevice dev, int length) {
-        int result = hid_get_input_report(ref dev, out byte[] data, length);
+        int result = hid_get_input_report((nint)dev, out byte[] data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes read");
         return data;
@@ -503,7 +503,7 @@ public static class HID {
     public static void Close(ref HidDevice dev) {
         _log.Info($"Closing Device");
         // AccessViolationException
-        hid_close(ref dev);
+        hid_close((nint)dev);
     }
 
     /// <summary>
@@ -517,7 +517,7 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static string GetManufacturerString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_manufacturer_string(ref dev, out string str, maxLen) == 0;
+        bool result = hid_get_manufacturer_string((nint)dev, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Manufacture String {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -535,7 +535,7 @@ public static class HID {
     /// </returns>
 
     public static string GetProductString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_product_string(ref dev, out string str, maxLen) == 0;
+        bool result = hid_get_product_string((nint)dev, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Product String {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -553,7 +553,7 @@ public static class HID {
     ///	</returns>
 
     public static string GetSerialNumberString(ref HidDevice dev, int maxLen) {
-        bool result = hid_get_serial_number_string(ref dev, out string str, maxLen) == 0;
+        bool result = hid_get_serial_number_string((nint)dev, out string str, maxLen) == 0;
         if (result) _log.Info($"Obtained Serial Number {str}");
         else _log.Error($"Error: {Error(ref dev)}");
         return str;
@@ -575,7 +575,7 @@ public static class HID {
     ///     This struct is valid until the device is closed with <see cref="Close(ref HidDevice)"/>.
     /// </returns>
     public static HidDeviceInfo? GetDeviceInfo(ref HidDevice dev) {
-        nint ptr = hid_get_device_info(ref dev);
+        nint ptr = hid_get_device_info((nint)dev);
         try {
             HidDeviceInfo hdi = Marshal.PtrToStructure<HidDeviceInfo>(ptr);
             if (hdi.ManufacturerString != null) _log.Info($"Successfully translated PTR to Structure {typeof(HidDeviceInfo).FullName}");
@@ -600,7 +600,7 @@ public static class HID {
     ///     Call <see cref="Error(ref HidDevice)"/> to get the failure reason.
     /// </returns>
     public static string GetIndexedString(ref HidDevice dev, int stringIndex, int maxlen) {
-        bool result = hid_get_indexed_string(ref dev, stringIndex, out string str, maxlen) == 0;
+        bool result = hid_get_indexed_string((nint)dev, stringIndex, out string str, maxlen) == 0;
         if (result) _log.Info($"Got Indexed String {str}");
         else _log.Error($"Could not get Indexed String; Error: {Error(ref dev)}");
         return str;
@@ -622,7 +622,7 @@ public static class HID {
     /// </returns>
 
     public static byte[] GetReportDescriptor(ref HidDevice dev, int bufSize) {
-        int result = hid_get_report_descriptor(ref dev, out byte[] buf, bufSize);
+        int result = hid_get_report_descriptor((nint)dev, out byte[] buf, bufSize);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"Successfully got Report Descriptor; Read {result} bytes");
         return buf;
@@ -650,10 +650,10 @@ public static class HID {
 
     public static string Error(ref HidDevice dev) {
         try {
-            string result = hid_error(ref dev);
+            string result = hid_error((nint)dev);
             _log.Trace($"Debug: Error().Result = \"{result}\"");
             return result;
-        }catch(Exception ex) {
+        } catch (Exception ex) {
             _log.Error($"Unknown Error: {ex}");
             return "";
         }
@@ -676,7 +676,7 @@ public static class HID {
             HidApiVersion version = Marshal.PtrToStructure<HidApiVersion>(ptr);
             _log.Info($"Acquired HID API Version ({version})");
             return version;
-        }catch (Exception ex) {
+        } catch (Exception ex) {
             _log.Error($"Unable to translate PTR to HidApiVersion; {ex}");
             return new HidApiVersion() { Major = -1, Minor = -1, Patch = -1 };
         }

@@ -1,6 +1,7 @@
-﻿namespace hid_sharp;
+﻿namespace hid_sharp.API;
 
-public enum HidBusType {
+public enum HidBusType
+{
     /// <summary>
     /// Unknown bus type
     /// </summary>

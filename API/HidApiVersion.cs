@@ -1,4 +1,4 @@
-﻿namespace hid_sharp;
+﻿namespace hid_sharp.API;
 
 public struct HidApiVersion {
     public int Major;
