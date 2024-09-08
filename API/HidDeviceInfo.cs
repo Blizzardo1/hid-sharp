@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace hid_sharp;
+namespace hid_sharp.API;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct HidDeviceInfo {
@@ -66,7 +66,7 @@ public struct HidDeviceInfo {
 
 
     public override string ToString() {
-        return $"{Path} - {VendorId:X4}:{ProductId:X4} - {ManufacturerString} - {ProductString} ({SerialNumber})";
+        return $"{Path} - {VendorId:X4}:{ProductId:X4} - {ManufacturerString} - {ProductString} ({UsagePage:X4}, {Usage:X4})";
     }
 
     public static explicit operator HidDeviceInfo(nint ptr) {
