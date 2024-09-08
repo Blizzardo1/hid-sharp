@@ -7,11 +7,10 @@ public struct HidApiVersion {
     public int Minor;
     public int Patch;
 
-    public static explicit operator nint(HidApiVersion hav) {
-        nint ptr = Marshal.AllocHGlobal(Marshal.SizeOf(hav));
-        Marshal.StructureToPtr(hav, ptr, false);
-        return ptr;
-    }
+    // This is removed unless it's absolutely needed. Recall HID.Version().
+    // public static explicit operator nint(HidApiVersion hav) {
+    //     return ptr;
+    // }
 
     public static explicit operator HidApiVersion(nint ptr) {
         return Marshal.PtrToStructure<HidApiVersion>(ptr);

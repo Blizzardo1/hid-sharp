@@ -98,7 +98,7 @@ public static class HID {
     private static extern int hid_get_report_descriptor(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] buf, int buf_size);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_error")]
-    private static extern string hid_error(nint dev);
+    private static extern nint hid_error(nint dev);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_version")]
     private static extern nint hid_version();
@@ -757,9 +757,14 @@ public static class HID {
             return "";
         }
         try {
-            string result = hid_error(ptr);
+            nint sPtr = hid_error(ptr);
+            string result = "";
+            if (sPtr != nint.Zero) {
+                result = Marshal.PtrToStringAnsi(sPtr) ?? "Failed to convert error string to ANSI";
+                _log.Info($"Result from Error: {result}");
+            }
             _log.Trace($"Debug: Error().Result = \"{result}\"");
-            return result;
+            return new (result);
         } catch (Exception ex) {
             _log.Error($"Unknown Error: {ex}");
             return "";

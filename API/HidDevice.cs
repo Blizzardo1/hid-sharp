@@ -97,12 +97,12 @@ public struct HidDevice {
     /// </summary>
     public int IsDriverDetached;
 
-    public HidDeviceInfo GetDeviceInfo() {
+    public readonly HidDeviceInfo GetDeviceInfo() {
         if (DeviceInfo == nint.Zero) return default;
-        return (HidDeviceInfo)Marshal.PtrToStructure(DeviceInfo, typeof(HidDeviceInfo))!;
+        return (HidDeviceInfo)DeviceInfo;
     }
 
-    public override bool Equals([NotNullWhen(true)] object? obj) => base.Equals(obj);
+    public override readonly bool Equals([NotNullWhen(true)] object? obj) => base.Equals(obj);
 
     public static bool operator ==(HidDevice a, HidDevice b) {
         return a.DeviceHandle == b.DeviceHandle;
