@@ -124,4 +124,8 @@ public struct HidDevice {
         }
         return ptr;
     }
+
+    public override int GetHashCode() {
+        return HashCode.Combine(DeviceHandle);
+    }
 }

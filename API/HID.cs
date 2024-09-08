@@ -56,25 +56,25 @@ public static class HID {
     private static extern int hid_write(nint dev, byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read_timeout")]
-    private static extern int hid_read_timeout(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length, int milliseconds);
+    private static extern int hid_read_timeout(nint dev, [Out] byte[] data, int length, int milliseconds);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_read")]
-    private static extern int hid_read(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_read(nint dev, [Out] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_set_nonblocking")]
     private static extern int hid_set_nonblocking(nint dev, int nonblock);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_send_feature")]
-    private static extern int hid_send_feature_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_send_feature_report(nint dev, byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_feature")]
-    private static extern int hid_get_feature_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_get_feature_report(nint dev, [Out] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_send_output_report")]
-    private static extern int hid_send_output_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] byte[] data, int length);
+    private static extern int hid_send_output_report(nint dev, byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_input_report")]
-    private static extern int hid_get_input_report(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] data, int length);
+    private static extern int hid_get_input_report(nint dev, [Out] byte[] data, int length);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_close")]
     private static extern void hid_close(nint dev);
@@ -95,7 +95,7 @@ public static class HID {
     private static extern int hid_get_indexed_string(nint dev, int string_index, out string @string, int maxlen);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_get_report_descriptor")]
-    private static extern int hid_get_report_descriptor(nint dev, [MarshalAs(UnmanagedType.LPArray)] out byte[] buf, int buf_size);
+    private static extern int hid_get_report_descriptor(nint dev, [Out] byte[] buf, int buf_size);
 
     [DllImport(Dll, CallingConvention = convention, EntryPoint = "hid_error")]
     private static extern nint hid_error(nint dev);
@@ -348,7 +348,8 @@ public static class HID {
             return [];
         }
         _log.Info($"Waiting {milliseconds}ms to read data with length {length}");
-        int result = hid_read_timeout(ptr, out byte[] data, length, milliseconds);
+        byte[] data = new byte[length];
+        int result = hid_read_timeout(ptr, data, length, milliseconds);
         _log.Info($"Read {result} bytes");
         return data;
     }
@@ -377,7 +378,8 @@ public static class HID {
             return [];
         }
         _log.Info($"Reading data with length {length}");
-        int read = hid_read(ptr, out byte[] result, length);
+        byte[] result = new byte[length];
+        int read = hid_read(ptr, result, length);
         _log.Info($"Read {read} bytes");
         return result;
     }
@@ -474,7 +476,8 @@ public static class HID {
             return [];
         }
         _log.Info("Getting Feature Report");
-        int result = hid_get_feature_report(ptr, out byte[] data, length);
+        byte[] data = new byte[length];
+        int result = hid_get_feature_report(ptr, data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes written");
         return data;
@@ -546,7 +549,8 @@ public static class HID {
             ErrorNoDev();
             return [];
         }
-        int result = hid_get_input_report(ptr, out byte[] data, length);
+        byte[] data = new byte[length];
+        int result = hid_get_input_report(ptr, data, length);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"{result} bytes read");
         return data;
@@ -725,7 +729,8 @@ public static class HID {
             ErrorNoDev();
             return [];
         }
-        int result = hid_get_report_descriptor(ptr, out byte[] buf, bufSize);
+        byte[] buf = new byte[bufSize];
+        int result = hid_get_report_descriptor(ptr, buf, bufSize);
         if (result == -1) _log.Error($"Error: {Error(ref dev)}");
         else _log.Info($"Successfully got Report Descriptor; Read {result} bytes");
         return buf;
