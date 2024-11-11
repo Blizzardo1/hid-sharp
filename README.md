@@ -32,6 +32,10 @@ Built with Visual Studio 2022 Enterprise with .NET 8.0
 Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code
 of conduct, and the process for submitting pull requests to us.
 
+## Code of Conduct
+Please read [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) and follow this document
+with utmost respect. We want everyone to feel welcome here.
+
 ## Versioning
 
 We use [Semantic Versioning](http://semver.org/) for versioning.  
