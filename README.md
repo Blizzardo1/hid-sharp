@@ -1,3 +1,8 @@
+![Static Badge](https://img.shields.io/badge/hid--sharp-Another_way_to_control_your_hardware_through_software-green)
+![GitHub last commit](https://img.shields.io/github/last-commit/Blizzardo1/hid-sharp)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/Blizzardo1/hid-sharp/master)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Blizzardo1/hid-sharp)
+![GitHub License](https://img.shields.io/github/license/Blizzardo1/hid-sharp)
 
 # HID#
 
